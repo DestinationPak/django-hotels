@@ -1,0 +1,10 @@
+# Core
+Django>=5.2,<6.0
+setuptools>=80.9.0
+
+# Django Extensions
+django-filter>=23.2
+djangorestframework>=3.16,<3.17
+
+# Database
+mysqlclient>=2.2.1
