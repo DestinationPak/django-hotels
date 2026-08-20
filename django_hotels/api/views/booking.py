@@ -2,10 +2,7 @@ from rest_framework import generics
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 
-from django_hotels.api.serializers import (
-    HotelBookingCreateSerializer,
-    HotelBookingLookupSerializer,
-)
+from django_hotels.api.serializers import HotelBookingCreateSerializer, HotelBookingLookupSerializer
 from django_hotels.models import HotelBooking
 
 
