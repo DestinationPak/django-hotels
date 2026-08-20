@@ -8,6 +8,9 @@ app_name = "hotels-api"
 
 router = DefaultRouter()
 router.register(r"hotels", hotel.HotelViewSet, basename="hotel")
+router.register(
+    r"bookings", booking.HotelBookingRetrieveUpdateViewSet, basename="booking"
+)
 
 app_urlpatterns = [
     path(
