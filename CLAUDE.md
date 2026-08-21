@@ -51,7 +51,7 @@ HotelOwner (the business/brand, mirrors django_trips.Host)
 concept of which user may manage a `HotelOwner`, no scoped querysets, no permission classes
 tied to ownership. That membership/authorization layer belongs to whatever project installs
 this app (e.g. destipak's `djangoapps/hotel_owners/`, mirroring its existing
-`djangoapps/hosts/` for Trips), never to this library itself.
+`djangoapps/trip_hosts/` for Trips), never to this library itself.
 
 ### API layer
 
@@ -67,3 +67,13 @@ post-hardening `TripViewSet`) plus explicit booking create/lookup endpoints
 `DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` just re-exports it for pytest.
 `django-hotels/wsgi.py`/`asgi.py`/`urls.py` are the minimal dev-only project shell and aren't
 part of the published package.
+
+## Testing conventions
+
+Build test fixtures via `django_hotels/tests/factories.py` (`HotelOwnerFactory`,
+`HotelFactory`, `HotelRoomTypeFactory`, `HotelAvailabilityFactory`, `HotelBookingFactory`,
+`UserFactory`) rather than calling `Model.objects.create(...)` directly in a test - mirrors
+`django_trips/tests/factories.py`'s existing convention one vertical over. Consuming projects
+(destipak's `djangoapps/hotel_owners/`) should do the same when their own tests need a Hotel/
+HotelOwner/HotelBooking fixture, since this module is importable wherever the package is
+installed (it's shipped as part of `django_hotels`, not test-only-excluded).
