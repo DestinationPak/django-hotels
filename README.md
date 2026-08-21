@@ -79,6 +79,11 @@ FK for now - a data migration best-effort backfills `location` from each existin
 itself is only dropped once every consumer has finished backfilling against its own chosen
 Location model.
 
+For a worked example of a real swap: the DestinationPakistan platform (this package's own
+primary consumer, a private project) points this setting at its own `public.City` model via a
+`HotelsRentalsCityLocationAdapter` in its `djangoapps/public/adapters.py` - the same shape
+sketched above, just concretely filled in.
+
 ## Local development
 
 All commands assume Docker (`make dev.up`, `make update_db`, `make test`) — see the Makefile
