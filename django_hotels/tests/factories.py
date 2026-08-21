@@ -12,7 +12,14 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from factory.django import DjangoModelFactory
 
-from django_hotels.models import Hotel, HotelAvailability, HotelBooking, HotelOwner, HotelRoomType
+from django_hotels.models import (
+    Hotel,
+    HotelAvailability,
+    HotelBooking,
+    HotelOwner,
+    HotelRoomType,
+    Location,
+)
 
 User = get_user_model()
 
@@ -44,6 +51,16 @@ class HotelOwnerFactory(DjangoModelFactory):
         lambda: [{"policy": "Full refund", "days": 7}]
     )
     verified = True
+
+
+class LocationFactory(DjangoModelFactory):
+    class Meta:
+        model = Location
+        django_get_or_create = ("name",)
+
+    name = factory.Faker("city")
+    lat = factory.Faker("latitude")
+    lng = factory.Faker("longitude")
 
 
 class HotelFactory(DjangoModelFactory):

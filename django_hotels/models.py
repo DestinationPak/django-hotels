@@ -8,12 +8,47 @@ permission layer belongs to whatever project installs this app, not here.
 
 import random
 
+import swapper
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
 from django_hotels import managers
 from django_hotels.choices import HotelBookingStatus, HotelStatus
+
+
+class Location(models.Model):
+    """
+    Default Location model, used unless a host project swaps it out via
+    DJANGO_HOTELS_LOCATION_MODEL (see README's "Custom Location model").
+
+    Deliberately minimal - no region/parent hierarchy like django_trips'
+    own Location has. Nothing in this package needed one yet; don't add
+    one speculatively.
+    """
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True, null=True, blank=True)
+    lat = models.CharField(max_length=20, null=True, blank=True)
+    lng = models.CharField(max_length=20, null=True, blank=True)
+
+    class Meta:
+        swappable = swapper.swappable_setting("django_hotels", "Location")
+        ordering = ["name"]
+
+    def __str__(self):
+        return str(self.name)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+def get_location_model():
+    """Location, or whichever model DJANGO_HOTELS_LOCATION_MODEL swaps it
+    for."""
+    return swapper.load_model("django_hotels", "Location")
 
 
 class HotelOwner(models.Model):
@@ -56,7 +91,22 @@ class Hotel(models.Model):
     owner = models.ForeignKey(
         HotelOwner, related_name="hotels", on_delete=models.CASCADE
     )
-    city = models.CharField(max_length=100)
+    city = models.CharField(
+        max_length=100,
+        help_text="Free-text city name - superseded by `location`, kept "
+        "until every row has been backfilled and this field is dropped "
+        "(see P9.3/P9.6).",
+    )
+    location = models.ForeignKey(
+        swapper.get_model_name("django_hotels", "Location"),
+        related_name="hotels",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Structured location - backfilled from `city` where it "
+        "cleanly matches (see the 0003 migration); `city` stays in place "
+        "until every row is backfilled.",
+    )
     description = models.TextField(null=True, blank=True)
 
     status = models.CharField(

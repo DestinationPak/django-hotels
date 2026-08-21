@@ -1,3 +1,4 @@
+import swapper
 from django.contrib import admin
 
 from django_hotels.models import (
@@ -7,6 +8,7 @@ from django_hotels.models import (
     HotelImage,
     HotelOwner,
     HotelRoomType,
+    Location,
 )
 
 
@@ -18,9 +20,22 @@ class HotelOwnerAdmin(admin.ModelAdmin):
 
 @admin.register(Hotel)
 class HotelAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "city", "status", "is_active")
+    list_display = ("name", "owner", "city", "location", "status", "is_active")
     list_filter = ("status", "is_active", "city")
     search_fields = ("name", "city")
+
+
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "lat", "lng")
+    search_fields = ("name", "slug")
+
+
+# Registering LocationAdmin against django_hotels.Location only makes
+# sense while it's actually the active model - once
+# DJANGO_HOTELS_LOCATION_MODEL is swapped, this table/model isn't
+# migrated at all.
+if not swapper.is_swapped("django_hotels", "Location"):
+    admin.site.register(Location, LocationAdmin)
 
 
 @admin.register(HotelRoomType)
