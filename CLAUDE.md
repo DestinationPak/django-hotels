@@ -70,10 +70,17 @@ part of the published package.
 
 ## Testing conventions
 
+New tests are written as `django.test.TestCase` subclasses, not bare
+`@pytest.mark.django_db`-decorated functions - matches `djangoapps/hotel_owners`' convention in
+destipak and `django_rentals`' one vertical over. `django_hotels/tests/test_models.py` and
+`django_hotels/api/tests/*.py` predate this convention and haven't been retrofitted - don't take
+their function-style shape as the pattern to follow for new tests.
+
 Build test fixtures via `django_hotels/tests/factories.py` (`HotelOwnerFactory`,
 `HotelFactory`, `HotelRoomTypeFactory`, `HotelAvailabilityFactory`, `HotelBookingFactory`,
 `UserFactory`) rather than calling `Model.objects.create(...)` directly in a test - mirrors
 `django_trips/tests/factories.py`'s existing convention one vertical over. Consuming projects
 (destipak's `djangoapps/hotel_owners/`) should do the same when their own tests need a Hotel/
 HotelOwner/HotelBooking fixture, since this module is importable wherever the package is
-installed (it's shipped as part of `django_hotels`, not test-only-excluded).
+installed (it's shipped as part of `django_hotels`, not test-only-excluded). A raw
+`.objects.create()` is still fine for a test whose whole point is model/manager mechanics.
