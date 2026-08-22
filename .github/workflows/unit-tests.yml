@@ -12,8 +12,27 @@ jobs:
       # Single entry, kept as a matrix only so the job name below can show it.
       matrix:
         python-version: ["3.13"]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: test_db
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     name: python-${{ matrix.python-version }}
+    env:
+      DB_NAME: test_db
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
     steps:
     - uses: actions/checkout@v4
 
@@ -32,7 +51,5 @@ jobs:
         python -c "import rest_framework; print('djangorestframework', rest_framework.VERSION)"
 
     - name: run tests
-      run: |
-        export PYLINTRC=.pylintrc
-        python -m run_lint.py
+      run: pytest
 
