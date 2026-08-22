@@ -38,7 +38,7 @@ class HotelAvailabilitySearchTestCase(TestCase):
         hotel = HotelFactory()
         room_type = HotelRoomTypeFactory(hotel=hotel)
         matching = HotelAvailabilityFactory(room_type=room_type)
-        HotelAvailabilityFactory()  # a different hotel entirely
+        HotelAvailabilityFactory()
 
         response = self.client.get(self.url, {"hotel": hotel.slug})
 
@@ -47,7 +47,7 @@ class HotelAvailabilitySearchTestCase(TestCase):
     def test_filters_by_room_type(self):
         room_type = HotelRoomTypeFactory()
         matching = HotelAvailabilityFactory(room_type=room_type)
-        HotelAvailabilityFactory()  # a different room type
+        HotelAvailabilityFactory()
 
         response = self.client.get(self.url, {"room_type": room_type.id})
 

@@ -32,7 +32,7 @@ class HotelViewSetFilteringTestCase(TestCase):
     def test_filters_by_owner(self):
         owner = HotelOwnerFactory()
         matching = HotelFactory(owner=owner)
-        HotelFactory()  # a different owner
+        HotelFactory()
 
         response = self.client.get(self.url, {"owner": owner.id})
 
