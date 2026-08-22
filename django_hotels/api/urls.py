@@ -19,6 +19,11 @@ app_urlpatterns = [
         name="owners",
     ),
     path(
+        "availabilities/",
+        hotel.HotelAvailabilityListAPIView.as_view(),
+        name="availabilities",
+    ),
+    path(
         "bookings/create/",
         booking.HotelBookingCreateView.as_view(),
         name="bookings-create",

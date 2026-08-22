@@ -19,10 +19,12 @@ pip install django-hotels
 ```
 
 ## Usage
-Add the app into your installed apps in your project's settings file.
+Add the app (and `django_filters`, used by the catalog/availability filtering below) into
+your installed apps in your project's settings file.
 ```
 INSTALLED_APPS = [
     ...
+    'django_filters',
     'django_hotels',
 ]
 ```
@@ -55,6 +57,24 @@ HotelOwner (the business/brand)
 `HotelOwner`/`Hotel` deliberately carry no login/auth/permission fields — this package is
 tenancy-oblivious, the same way `django-trips` is. A consuming project owns the membership
 layer (who may manage which `HotelOwner`), not this library.
+
+## Public API
+
+Read-only and unauthenticated (`AllowAny`) unless noted:
+
+- `hotels/` - the published catalog. Filterable via query params: `?city=`, `?status=`,
+  `?owner=<id>`.
+- `hotels/<slug>/` - one hotel's detail, including its room types.
+- `owners/` - active, verified `HotelOwner`s.
+- `availabilities/` - date-range availability search across active hotels' room types.
+  Filterable via `?hotel=<slug>`, `?room_type=<id>`, `?date_from=`, `?date_to=` (any
+  combination; omitting all three returns every upcoming bookable date).
+- `bookings/create/` - guest booking (no auth required).
+- `bookings/lookup/?number=&email=` (or `&otp=` instead of `email`) - guest "find my
+  booking".
+- `bookings/<number>/` - authenticated traveller's own booking (retrieve/update).
+- `schema/`, `schema/swagger-ui/`, `schema/redoc/` - this app's own OpenAPI schema,
+  scoped to just these endpoints regardless of what else your project mounts.
 
 ## Custom Location model
 
