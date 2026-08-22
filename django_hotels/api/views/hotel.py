@@ -1,13 +1,16 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from django_hotels.api.filters import HotelAvailabilityFilter
 from django_hotels.api.serializers import (
+    HotelAvailabilitySerializer,
     HotelDetailSerializer,
     HotelListSerializer,
     HotelOwnerSerializer,
 )
-from django_hotels.models import Hotel, HotelOwner
+from django_hotels.models import Hotel, HotelAvailability, HotelOwner
 
 
 class HotelViewSet(ReadOnlyModelViewSet):
@@ -19,6 +22,8 @@ class HotelViewSet(ReadOnlyModelViewSet):
 
     permission_classes = [AllowAny]
     lookup_field = "slug"
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["city", "status", "owner"]
 
     def get_queryset(self):
         return Hotel.objects.active().select_related("owner")
@@ -35,3 +40,27 @@ class ActiveHotelOwnersListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         return HotelOwner.objects.active()
+
+
+class HotelAvailabilityListAPIView(generics.ListAPIView):
+    """
+    Public availability search - which room types are bookable, and at
+    what price, optionally filtered by hotel, room type, and/or a date
+    range (see HotelAvailabilityFilter).
+    """
+
+    permission_classes = [AllowAny]
+    serializer_class = HotelAvailabilitySerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = HotelAvailabilityFilter
+
+    def get_queryset(self):
+        return (
+            HotelAvailability.objects.filter(
+                rooms_available__gt=0,
+                room_type__is_active=True,
+                room_type__hotel__in=Hotel.objects.active(),
+            )
+            .select_related("room_type", "room_type__hotel")
+            .order_by("date")
+        )
