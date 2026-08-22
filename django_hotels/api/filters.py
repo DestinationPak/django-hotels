@@ -6,10 +6,7 @@ from django_hotels.models import HotelAvailability
 
 
 class HotelAvailabilityFilter(django_filters.FilterSet):
-    """
-    Filters the availability-search endpoint by hotel, room type, and
-    an inclusive date range.
-    """
+    """Filters availability search by hotel, room type, and date range."""
 
     hotel = django_filters.CharFilter(field_name="room_type__hotel__slug")
     room_type = django_filters.NumberFilter(field_name="room_type_id")

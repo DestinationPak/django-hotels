@@ -44,9 +44,11 @@ class ActiveHotelOwnersListAPIView(generics.ListAPIView):
 
 class HotelAvailabilityListAPIView(generics.ListAPIView):
     """
-    Public availability search - which room types are bookable, and at
-    what price, optionally filtered by hotel, room type, and/or a date
-    range (see HotelAvailabilityFilter).
+    Public availability search across hotels' room types and dates.
+
+    Excludes sold-out dates, inactive room types, and hotels behind an
+    inactive or unverified owner, matching HotelViewSet's own catalog
+    visibility rules.
     """
 
     permission_classes = [AllowAny]
