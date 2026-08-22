@@ -1,5 +1,10 @@
 # Django Hotels API
 
+[![PyPI version](https://img.shields.io/pypi/v/django-hotels.svg)](https://pypi.org/project/django-hotels/)
+[![Python versions](https://img.shields.io/pypi/pyversions/django-hotels.svg)](https://pypi.org/project/django-hotels/)
+[![License](https://img.shields.io/pypi/l/django-hotels.svg)](https://github.com/DestinationPak/django-hotels/blob/master/LICENSE)
+[![Unit Tests](https://github.com/DestinationPak/django-hotels/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/DestinationPak/django-hotels/actions/workflows/unit-tests.yml)
+
 This is a Django REST API for managing and retrieving hotels, room types, availability, and
 bookings.
 
