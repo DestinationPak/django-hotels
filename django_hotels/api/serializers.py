@@ -65,8 +65,10 @@ class HotelDetailSerializer(serializers.ModelSerializer):
 
 
 class HotelAvailabilityRoomTypeSerializer(serializers.ModelSerializer):
-    """Minimal room-type context for an availability row - just enough to
-    say which hotel/room a date+price belongs to."""
+    """
+    Minimal room-type context for an availability row - just enough to
+    say which hotel/room a date+price belongs to.
+    """
 
     hotel = serializers.SlugRelatedField(slug_field="slug", read_only=True)
 
