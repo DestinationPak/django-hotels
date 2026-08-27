@@ -91,21 +91,12 @@ class Hotel(models.Model):
     owner = models.ForeignKey(
         HotelOwner, related_name="hotels", on_delete=models.CASCADE
     )
-    city = models.CharField(
-        max_length=100,
-        help_text="Free-text city name - superseded by `location`, kept "
-        "until every row has been backfilled and this field is dropped "
-        "(see P9.3/P9.6).",
-    )
     location = models.ForeignKey(
         swapper.get_model_name("django_hotels", "Location"),
         related_name="hotels",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        help_text="Structured location - backfilled from `city` where it "
-        "cleanly matches (see the 0003 migration); `city` stays in place "
-        "until every row is backfilled.",
     )
     description = models.TextField(null=True, blank=True)
 

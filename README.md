@@ -98,11 +98,10 @@ Two settings, both optional and both defaulting to this package's own bundled mo
 swappable-model setting - Django resolves it once when the app loads, and a swap made after
 `Location`'s own table has already been created doesn't retroactively move existing data.
 
-`Hotel.city` (the original free-text field) stays in place alongside the new `Hotel.location`
-FK for now - a data migration best-effort backfills `location` from each existing `city` string
-(matching or creating a `Location` by name), leaving it null wherever `city` is blank. `city`
-itself is only dropped once every consumer has finished backfilling against its own chosen
-Location model.
+`Hotel.location` is the only location field on `Hotel` - the original free-text `Hotel.city`
+field has been dropped. `HotelListSerializer`/`HotelDetailSerializer` expose `location` as an
+object (`name`/`slug`/`lat`/`lng`) read through `get_location_adapter()`, and the public
+`?city=` query param filters on `location__name` under the hood.
 
 For a worked example of a real swap: the DestinationPakistan platform (this package's own
 primary consumer, a private project) points this setting at its own `public.City` model via a

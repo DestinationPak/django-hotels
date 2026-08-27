@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from django_hotels.location_adapter import get_location_adapter
 from django_hotels.models import (
     Hotel,
     HotelAvailability,
@@ -36,16 +37,37 @@ class HotelRoomTypeSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "base_price", "max_occupancy")
 
 
+class LocationSerializer(serializers.Serializer):
+    name = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+
+    def get_name(self, obj):
+        return get_location_adapter().get_name(obj)
+
+    def get_slug(self, obj):
+        return get_location_adapter().get_slug(obj)
+
+    def get_lat(self, obj):
+        return get_location_adapter().get_lat(obj)
+
+    def get_lng(self, obj):
+        return get_location_adapter().get_lng(obj)
+
+
 class HotelListSerializer(serializers.ModelSerializer):
     owner = HotelOwnerSerializer(read_only=True)
+    location = LocationSerializer(read_only=True)
 
     class Meta:
         model = Hotel
-        fields = ("id", "name", "slug", "owner", "city", "status")
+        fields = ("id", "name", "slug", "owner", "location", "status")
 
 
 class HotelDetailSerializer(serializers.ModelSerializer):
     owner = HotelOwnerSerializer(read_only=True)
+    location = LocationSerializer(read_only=True)
     images = HotelImageSerializer(many=True, read_only=True)
     room_types = HotelRoomTypeSerializer(many=True, read_only=True)
 
@@ -56,7 +78,7 @@ class HotelDetailSerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "owner",
-            "city",
+            "location",
             "description",
             "status",
             "images",

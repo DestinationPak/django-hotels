@@ -13,6 +13,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from django_hotels.models import Hotel, HotelOwner
+from django_hotels.tests.factories import LocationFactory
 
 User = get_user_model()
 
@@ -22,7 +23,7 @@ def hotel(db):
     owner = HotelOwner.objects.create(name="Karakoram Stays", verified=True)
     creator = User.objects.create(username="staff")
     return Hotel.objects.create(
-        name="Hunza Serena", owner=owner, city="Hunza", created_by=creator
+        name="Hunza Serena", owner=owner, location=LocationFactory(name="Hunza"), created_by=creator
     )
 
 

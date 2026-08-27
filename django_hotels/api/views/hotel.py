@@ -3,7 +3,7 @@ from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from django_hotels.api.filters import HotelAvailabilityFilter
+from django_hotels.api.filters import HotelAvailabilityFilter, HotelFilter
 from django_hotels.api.serializers import (
     HotelAvailabilitySerializer,
     HotelDetailSerializer,
@@ -23,7 +23,7 @@ class HotelViewSet(ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["city", "status", "owner"]
+    filterset_class = HotelFilter
 
     def get_queryset(self):
         return Hotel.objects.active().select_related("owner")

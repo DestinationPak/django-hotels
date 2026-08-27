@@ -20,9 +20,9 @@ class HotelOwnerAdmin(admin.ModelAdmin):
 
 @admin.register(Hotel)
 class HotelAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "city", "location", "status", "is_active")
-    list_filter = ("status", "is_active", "city")
-    search_fields = ("name", "city")
+    list_display = ("name", "owner", "location", "status", "is_active")
+    list_filter = ("status", "is_active")
+    search_fields = ("name",)
 
 
 class LocationAdmin(admin.ModelAdmin):

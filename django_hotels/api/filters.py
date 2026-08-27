@@ -2,7 +2,7 @@
 
 import django_filters
 
-from django_hotels.models import HotelAvailability
+from django_hotels.models import Hotel, HotelAvailability
 
 
 class HotelAvailabilityFilter(django_filters.FilterSet):
@@ -16,3 +16,11 @@ class HotelAvailabilityFilter(django_filters.FilterSet):
     class Meta:
         model = HotelAvailability
         fields = ["hotel", "room_type", "date_from", "date_to"]
+
+
+class HotelFilter(django_filters.FilterSet):
+    city = django_filters.CharFilter(field_name="location__name", lookup_expr="iexact")
+
+    class Meta:
+        model = Hotel
+        fields = ["city", "status", "owner"]

@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from django_hotels.choices import HotelStatus
-from django_hotels.tests.factories import HotelFactory, HotelOwnerFactory
+from django_hotels.tests.factories import HotelFactory, HotelOwnerFactory, LocationFactory
 
 
 class HotelViewSetFilteringTestCase(TestCase):
@@ -14,8 +14,8 @@ class HotelViewSetFilteringTestCase(TestCase):
         self.url = reverse("hotels-api:hotel-list")
 
     def test_filters_by_city(self):
-        matching = HotelFactory(city="Hunza")
-        HotelFactory(city="Skardu")
+        matching = HotelFactory(location=LocationFactory(name="Hunza"))
+        HotelFactory(location=LocationFactory(name="Skardu"))
 
         response = self.client.get(self.url, {"city": "Hunza"})
 
