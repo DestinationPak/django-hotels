@@ -29,9 +29,18 @@ make dev.up         # start web + mysql containers
 make shell          # attach a shell inside the web container
 make update_db      # run migrations
 make random_hotels  # seed random hotels (generate_hotels --batch_size=10)
-make test           # docker compose run --rm web pytest
+make test           # docker compose run --rm --no-deps -e DJANGO_SETTINGS_MODULE=settings.test web pytest
 make stop / make destroy
 ```
+
+`make test` explicitly overrides `DJANGO_SETTINGS_MODULE` and skips the `database` dependency -
+`settings/test.py` swaps in an in-memory SQLite `DATABASES`, but `docker-compose.yml`'s `web`
+service sets `DJANGO_SETTINGS_MODULE=settings.common` as a container-wide environment variable,
+which pytest-django only ever uses as a fallback (`os.environ.setdefault`, never overriding an
+already-set var) - so without the explicit `-e` override, `pytest.ini`'s own
+`DJANGO_SETTINGS_MODULE = settings.test` is silently ignored and tests run against real MySQL
+instead, which also makes `--no-deps` (skip starting the `database` container) unsafe to combine
+with the plain `docker compose run --rm web pytest` form.
 
 ## Architecture
 
@@ -80,7 +89,9 @@ post-hardening `TripViewSet`) plus explicit booking create/lookup endpoints
 ### Settings
 
 `settings/common.py` is the real settings module (Docker sets
-`DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` just re-exports it for pytest.
+`DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` re-exports it for pytest but
+swaps `DATABASES` to an in-memory SQLite backend (see "Common commands" above for how `make
+test` forces this to actually take effect).
 `django-hotels/wsgi.py`/`asgi.py`/`urls.py` are the minimal dev-only project shell and aren't
 part of the published package.
 
