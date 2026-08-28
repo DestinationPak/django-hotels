@@ -23,7 +23,7 @@ class HotelViewSet(ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["city", "status", "owner"]
+    filterset_fields = ["location", "status", "owner"]
 
     def get_queryset(self):
         return Hotel.objects.active().select_related("owner")

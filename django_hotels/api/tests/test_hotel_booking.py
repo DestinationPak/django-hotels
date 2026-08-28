@@ -23,7 +23,7 @@ User = get_user_model()
 def availability(db):
     owner = HotelOwner.objects.create(name="Karakoram Stays", verified=True)
     creator = User.objects.create(username="staff")
-    hotel = Hotel.objects.create(name="Hunza Serena", owner=owner, city="Hunza", created_by=creator)
+    hotel = Hotel.objects.create(name="Hunza Serena", owner=owner, created_by=creator)
     room_type = HotelRoomType.objects.create(hotel=hotel, name="Standard", base_price=5000)
     return HotelAvailability.objects.create(room_type=room_type, date="2026-09-01")
 

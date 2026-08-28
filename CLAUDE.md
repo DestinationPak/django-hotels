@@ -55,16 +55,15 @@ this app (e.g. destipak's `djangoapps/hotel_owners/`, mirroring its existing
 
 `Location` (plain `name`/`slug`/`lat`/`lng`, no hierarchy - unlike `django_trips.Location`'s
 `type`/`parent`) is swappable via `swapper` (see README's "Custom Location model"), the same
-mechanism `django_trips.Location` uses. `Hotel.location` is a new, nullable FK added alongside
-the pre-existing `Hotel.city` `CharField` — `city` is **not yet removed**; a data migration
-(`migrations/0003_backfill_hotel_locations.py`) best-effort backfills `location` from `city` by
-name, and `city` only gets dropped once every consumer (destipak included) has finished
-backfilling against its own chosen Location model. `django_hotels/location_adapter.py`
+mechanism `django_trips.Location` uses. `Hotel.location` (nullable FK) is now the only location
+field on `Hotel` - the original free-text `Hotel.city` `CharField` (`migrations/
+0003_backfill_hotel_locations.py` best-effort backfilled `location` from it by name) has been
+dropped (`migrations/0004_remove_hotel_city.py`), once every consumer (destipak included) had
+finished backfilling against its own chosen Location model. `django_hotels/location_adapter.py`
 (`LocationAdapter`/`get_location_adapter()`, `DJANGO_HOTELS_LOCATION_ADAPTER`) is the read path
-for location fields, mirroring `django_trips/location_adapter.py` one vertical over - nothing
-in this package's own serializers reads `location`'s fields yet (`city` is still what's
-exposed), so the adapter exists as the swap-point infrastructure, ready for whichever consumer
-project (or a later ticket here) actually surfaces `location` in output. `AbstractLocation`
+for location fields - `HotelListSerializer`/`HotelDetailSerializer` now expose `location` as a
+nested object through the adapter (via this package's own `LocationSerializer`), and
+`HotelViewSet`'s `?location=<id>` query param filters on it directly. `AbstractLocation`
 (`models.py`) is a plain abstract Django model - the same shape `AbstractUser` is, real fields
 and concrete methods, not an interface class - an installer building a brand-new custom
 Location model can inherit directly instead of writing a `LocationAdapter` subclass; see

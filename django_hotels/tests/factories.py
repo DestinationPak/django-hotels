@@ -69,7 +69,7 @@ class HotelFactory(DjangoModelFactory):
 
     name = factory.Faker("company")
     owner = factory.SubFactory(HotelOwnerFactory)
-    city = factory.Faker("city")
+    location = factory.SubFactory(LocationFactory)
     description = factory.Faker("text")
     created_by = factory.SubFactory(UserFactory)
 
