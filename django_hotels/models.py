@@ -17,10 +17,15 @@ from django_hotels import managers
 from django_hotels.choices import HotelBookingStatus, HotelStatus
 
 
-class Location(models.Model):
+class AbstractLocation(models.Model):
     """
-    Default Location model, used unless a host project swaps it out via
-    DJANGO_HOTELS_LOCATION_MODEL (see README's "Custom Location model").
+    Base fields and behavior for a Location model.
+
+    Inherit this to build a custom Location model instead of writing a
+    LocationAdapter subclass - you get these fields and methods for
+    free and only override what needs to change. See the README's
+    "Custom Location model" section for when to reach for this versus
+    the adapter.
 
     Deliberately minimal - no region/parent hierarchy like django_trips'
     own Location has. Nothing in this package needed one yet; don't add
@@ -33,7 +38,7 @@ class Location(models.Model):
     lng = models.CharField(max_length=20, null=True, blank=True)
 
     class Meta:
-        swappable = swapper.swappable_setting("django_hotels", "Location")
+        abstract = True
         ordering = ["name"]
 
     def __str__(self):
@@ -43,6 +48,13 @@ class Location(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+
+class Location(AbstractLocation):
+    """This package's own default, concrete Location model."""
+
+    class Meta(AbstractLocation.Meta):
+        swappable = swapper.swappable_setting("django_hotels", "Location")
 
 
 def get_location_model():
