@@ -43,22 +43,22 @@ class LocationSerializer(serializers.Serializer):
     lat = serializers.SerializerMethodField()
     lng = serializers.SerializerMethodField()
 
-    def get_name(self, obj):
+    def get_name(self, obj) -> str | None:
         return get_location_adapter().get_name(obj)
 
-    def get_slug(self, obj):
+    def get_slug(self, obj) -> str | None:
         return get_location_adapter().get_slug(obj)
 
-    def get_lat(self, obj):
+    def get_lat(self, obj) -> float | None:
         return get_location_adapter().get_lat(obj)
 
-    def get_lng(self, obj):
+    def get_lng(self, obj) -> float | None:
         return get_location_adapter().get_lng(obj)
 
 
 class HotelListSerializer(serializers.ModelSerializer):
     owner = HotelOwnerSerializer(read_only=True)
-    location = LocationSerializer(read_only=True)
+    location = LocationSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = Hotel
@@ -67,7 +67,7 @@ class HotelListSerializer(serializers.ModelSerializer):
 
 class HotelDetailSerializer(serializers.ModelSerializer):
     owner = HotelOwnerSerializer(read_only=True)
-    location = LocationSerializer(read_only=True)
+    location = LocationSerializer(read_only=True, allow_null=True)
     images = HotelImageSerializer(many=True, read_only=True)
     room_types = HotelRoomTypeSerializer(many=True, read_only=True)
 

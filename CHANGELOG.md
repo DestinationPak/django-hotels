@@ -5,6 +5,18 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Removed
+- `Hotel.city` (a free-text `CharField`) - superseded by `Hotel.location`, a
+  swappable FK.
+
+### Changed
+- `HotelListSerializer`/`HotelDetailSerializer` now return a nested
+  `location` object (`name`/`slug`/`lat`/`lng`) instead of the removed
+  `city` string field.
+- The public `?city=` filter on `/hotels/` now does a case-insensitive
+  match against `location.name` instead of an exact match on the removed
+  `city` field.
+
 ### Fixed
 - CI's `Unit Tests` workflow now actually runs `pytest` - its last step was a
   copy-paste of the `Quality` workflow's lint command, so no test in the

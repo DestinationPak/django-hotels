@@ -26,7 +26,7 @@ class HotelViewSet(ReadOnlyModelViewSet):
     filterset_class = HotelFilter
 
     def get_queryset(self):
-        return Hotel.objects.active().select_related("owner")
+        return Hotel.objects.active().select_related("owner", "location")
 
     def get_serializer_class(self):
         if self.action == "retrieve":
