@@ -25,7 +25,7 @@ django-trips).
 
 ```bash
 make build          # docker compose build (destroys existing containers first)
-make dev.up         # start web + mysql containers
+make dev.up         # start web (SQLite by default - see "Settings" below for the MySQL opt-in)
 make shell          # attach a shell inside the web container
 make update_db      # run migrations
 make random_hotels  # seed random hotels (generate_hotels --batch_size=10)
