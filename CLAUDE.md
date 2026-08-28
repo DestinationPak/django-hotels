@@ -29,9 +29,18 @@ make dev.up         # start web (SQLite by default - see "Settings" below for th
 make shell          # attach a shell inside the web container
 make update_db      # run migrations
 make random_hotels  # seed random hotels (generate_hotels --batch_size=10)
-make test           # docker compose run --rm web pytest
+make test           # docker compose run --rm --no-deps -e DJANGO_SETTINGS_MODULE=settings.test web pytest
 make stop / make destroy
 ```
+
+`make test` explicitly overrides `DJANGO_SETTINGS_MODULE` and skips the `database` dependency -
+`settings/test.py` swaps in an in-memory SQLite `DATABASES`, but `docker-compose.yml`'s `web`
+service sets `DJANGO_SETTINGS_MODULE=settings.common` as a container-wide environment variable,
+which pytest-django only ever uses as a fallback (`os.environ.setdefault`, never overriding an
+already-set var) - so without the explicit `-e` override, `pytest.ini`'s own
+`DJANGO_SETTINGS_MODULE = settings.test` is silently ignored and tests run against real MySQL
+instead, which also makes `--no-deps` (skip starting the `database` container) unsafe to combine
+with the plain `docker compose run --rm web pytest` form.
 
 ## Architecture
 
@@ -80,25 +89,18 @@ post-hardening `TripViewSet`) plus explicit booking create/lookup endpoints
 ### Settings
 
 `settings/common.py` is the real settings module (Docker sets
-`DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` just re-exports it for pytest.
+`DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` re-exports it for pytest but
+swaps `DATABASES` to an in-memory SQLite backend (see "Common commands" above for how `make
+test` forces this to actually take effect).
 `django-hotels/wsgi.py`/`asgi.py`/`urls.py` are the minimal dev-only project shell and aren't
 part of the published package.
 
 `DATABASES` reads `DATABASE_ENGINE`, defaulting to `django.db.backends.sqlite3` if unset -
-matching the pattern well-known reusable Django apps (django-oscar, wagtail) use. `make dev.up`
-(`docker compose up`, no profile) now runs against SQLite by default, with no `database` container
-involved at all - that service carries `profiles: [mysql]` in `docker-compose.yml`, so it only
-starts when explicitly asked for (`docker compose --profile mysql up`), and `web` itself only
-connects to it once `DATABASE_ENGINE=django.db.backends.mysql` is set in `.env` too - the profile
-alone isn't enough, both are required together, on purpose. `mysqlclient` is installed via its own
-`RUN pip install` line in the `Dockerfile` rather than listed in `requirements.txt`, so it stays
-outside GitHub's dependency graph/Dependabot scanning entirely - it's dev-only either way, and only
-ever used when the MySQL opt-in above is active. `web` no longer has a `depends_on: database`
-health-gate (it would break the profile-less default case, since Compose can't depend on a
-profile-gated service that isn't active) - so on a fresh MySQL opt-in, `web`'s first `migrate` can
-race `database`'s startup and fail once; `restart: unless-stopped` retries it automatically and it
-recovers within a few seconds once MySQL is healthy. Not a bug, just the trade-off of making MySQL
-truly optional.
+matching the pattern well-known reusable Django apps (django-oscar, wagtail) use, so a bare
+`manage.py runserver` outside Docker works with zero DB setup. `docker-compose.yml`'s `web`
+service explicitly sets `DATABASE_ENGINE=django.db.backends.mysql`, so the documented Docker
+devstack keeps using real MySQL as before - this only adds an escape hatch, it doesn't change
+`make dev.up`'s default behavior.
 
 ## Testing conventions
 
