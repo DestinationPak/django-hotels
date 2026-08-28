@@ -120,11 +120,10 @@ libraries - stick with the adapter approach above; that's what it's for.
 swappable-model setting - Django resolves it once when the app loads, and a swap made after
 `Location`'s own table has already been created doesn't retroactively move existing data.
 
-`Hotel.city` (the original free-text field) stays in place alongside the new `Hotel.location`
-FK for now - a data migration best-effort backfills `location` from each existing `city` string
-(matching or creating a `Location` by name), leaving it null wherever `city` is blank. `city`
-itself is only dropped once every consumer has finished backfilling against its own chosen
-Location model.
+`Hotel.location` is the only location field on `Hotel` now - the original free-text `Hotel.city`
+field has been dropped. If you're upgrading from a version that still had it, a prior migration
+best-effort backfilled `location` from each existing `city` string (matching or creating a
+`Location` by name) before `city` itself was removed.
 
 For a worked example of a real swap: the DestinationPakistan platform (this package's own
 primary consumer, a private project) points this setting directly at its own `public.Location`

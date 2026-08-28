@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from django_hotels.location_adapter import get_location_adapter
 from django_hotels.models import (
     Hotel,
     HotelAvailability,
@@ -8,6 +9,32 @@ from django_hotels.models import (
     HotelOwner,
     HotelRoomType,
 )
+
+
+class LocationSerializer(serializers.Serializer):  # pylint:disable=abstract-method
+    """
+    A plain Serializer, not a ModelSerializer - every field is read
+    through get_location_adapter() rather than by name off the model
+    directly, so this keeps working whether django_hotels.Location or a
+    swapped-in model (DJANGO_HOTELS_LOCATION_MODEL) backs the FK.
+    """
+
+    name = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+
+    def get_name(self, location):
+        return get_location_adapter().get_name(location)
+
+    def get_slug(self, location):
+        return get_location_adapter().get_slug(location)
+
+    def get_lat(self, location):
+        return get_location_adapter().get_lat(location)
+
+    def get_lng(self, location):
+        return get_location_adapter().get_lng(location)
 
 
 class HotelOwnerSerializer(serializers.ModelSerializer):
@@ -38,14 +65,16 @@ class HotelRoomTypeSerializer(serializers.ModelSerializer):
 
 class HotelListSerializer(serializers.ModelSerializer):
     owner = HotelOwnerSerializer(read_only=True)
+    location = LocationSerializer(read_only=True)
 
     class Meta:
         model = Hotel
-        fields = ("id", "name", "slug", "owner", "city", "status")
+        fields = ("id", "name", "slug", "owner", "location", "status")
 
 
 class HotelDetailSerializer(serializers.ModelSerializer):
     owner = HotelOwnerSerializer(read_only=True)
+    location = LocationSerializer(read_only=True)
     images = HotelImageSerializer(many=True, read_only=True)
     room_types = HotelRoomTypeSerializer(many=True, read_only=True)
 
@@ -56,7 +85,7 @@ class HotelDetailSerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "owner",
-            "city",
+            "location",
             "description",
             "status",
             "images",

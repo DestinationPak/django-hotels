@@ -1,11 +1,11 @@
-"""HotelViewSet's django-filter query params: city, status, owner."""
+"""HotelViewSet's django-filter query params: location, status, owner."""
 
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from django_hotels.choices import HotelStatus
-from django_hotels.tests.factories import HotelFactory, HotelOwnerFactory
+from django_hotels.tests.factories import HotelFactory, HotelOwnerFactory, LocationFactory
 
 
 class HotelViewSetFilteringTestCase(TestCase):
@@ -13,11 +13,12 @@ class HotelViewSetFilteringTestCase(TestCase):
         self.client = APIClient()
         self.url = reverse("hotels-api:hotel-list")
 
-    def test_filters_by_city(self):
-        matching = HotelFactory(city="Hunza")
-        HotelFactory(city="Skardu")
+    def test_filters_by_location(self):
+        hunza = LocationFactory(name="Hunza")
+        matching = HotelFactory(location=hunza)
+        HotelFactory(location=LocationFactory(name="Skardu"))
 
-        response = self.client.get(self.url, {"city": "Hunza"})
+        response = self.client.get(self.url, {"location": hunza.id})
 
         self.assertEqual([h["slug"] for h in response.data], [matching.slug])
 

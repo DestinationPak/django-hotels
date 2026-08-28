@@ -7,7 +7,13 @@ from django.utils import timezone
 from django.utils.text import slugify
 from faker import Faker
 
-from django_hotels.models import Hotel, HotelAvailability, HotelOwner, HotelRoomType
+from django_hotels.models import (
+    Hotel,
+    HotelAvailability,
+    HotelOwner,
+    HotelRoomType,
+    get_location_model,
+)
 
 fake = Faker()
 User = get_user_model()
@@ -44,11 +50,14 @@ class Command(BaseCommand):
                 verified=True,
             )
             hotel_name = f"{fake.city()} {random.choice(['Inn', 'Resort', 'Lodge'])}"
+            location, _ = get_location_model().objects.get_or_create(
+                name=random.choice(CITIES)
+            )
             hotel = Hotel.objects.create(
                 name=hotel_name,
                 slug=f"{slugify(hotel_name)}-{random.randint(1000, 9999)}",
                 owner=owner,
-                city=random.choice(CITIES),
+                location=location,
                 description=fake.paragraph(),
                 created_by=user,
             )

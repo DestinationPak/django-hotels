@@ -19,10 +19,10 @@ def test_hotel_active_manager_requires_verified_owner():
     verified_owner = HotelOwner.objects.create(name="Trusted Owner", verified=True)
 
     Hotel.objects.create(
-        name="Unverified Inn", owner=unverified_owner, city="Hunza", created_by=user
+        name="Unverified Inn", owner=unverified_owner, created_by=user
     )
     verified_hotel = Hotel.objects.create(
-        name="Trusted Inn", owner=verified_owner, city="Hunza", created_by=user
+        name="Trusted Inn", owner=verified_owner, created_by=user
     )
 
     assert list(Hotel.objects.active()) == [verified_hotel]
@@ -32,7 +32,7 @@ def test_hotel_active_manager_requires_verified_owner():
 def test_hotel_booking_generates_reference_number_and_otp():
     user = User.objects.create(username="staff2")
     owner = HotelOwner.objects.create(name="Owner", verified=True)
-    hotel = Hotel.objects.create(name="Hotel", owner=owner, city="Skardu", created_by=user)
+    hotel = Hotel.objects.create(name="Hotel", owner=owner, created_by=user)
     room_type = HotelRoomType.objects.create(hotel=hotel, name="Standard", base_price=5000)
     availability = HotelAvailability.objects.create(room_type=room_type, date="2026-09-01")
 
