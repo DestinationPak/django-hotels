@@ -5,6 +5,13 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-08-29
+
+### Changed
+- `Development Status :: 4 - Beta` classifier, up from `3 - Alpha` - the
+  package has been running in destipak's own production stack, so `Alpha`
+  was undercutting its actual maturity to anyone checking PyPI.
+
 ## [0.3.1] - 2026-08-29
 
 ### Changed
