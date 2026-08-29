@@ -6,8 +6,12 @@ THRESHOLD = 6
 
 # pylint:disable=all
 pylint_opts = [
-    "--disable=line-too-long --load-plugins pylint_django --django-settings-module=settings.test --rcfile=.pylintrc",
-    "./django_hotels",
+    "--disable=line-too-long",
+    "--load-plugins",
+    "pylint_django",
+    "--django-settings-module=settings.test",
+    "--rcfile=.pylintrc",
+    "./src/django_hotels",
 ]
 
 sys.stdout.write(f"Running... {pylint_opts}")

@@ -5,14 +5,15 @@ repository.
 
 ## What this is
 
-`django-hotels` is a reusable Django app (published as a pip package, see `setup.cfg`)
+`django-hotels` is a reusable Django app (published as a pip package, see `pyproject.toml`)
 providing a REST API for managing hotels, room types, availability, and bookings. It's the
 Hotels-vertical sibling of [django-trips](https://github.com/awaisdar001/django-trips), and is
 part of the [DestinationPak](https://destinationpak.com) platform.
 
-Note the two similarly-named top-level packages: `django-hotels/` (hyphen) is the throwaway
-Django *project* shell used only for local dev (`urls.py`/`wsgi.py`/`asgi.py`); `django_hotels/`
-(underscore) is the actual app that gets published and contains all real logic.
+The importable app lives at `src/django_hotels/` (`src/` layout - see "Packaging" below for
+why). `devsite/` is a separate, throwaway Django *project* shell used only for local dev
+(`urls.py`/`wsgi.py`/`asgi.py`) - deliberately named nothing like `django_hotels` so the two
+can't be confused with each other or with the published package.
 
 This is a basic initial scaffold — models, a read-only public catalog API, and a guest booking
 flow exist; nothing beyond that has been built yet (no schema/swagger docs, no reviews, no
@@ -92,7 +93,7 @@ post-hardening `TripViewSet`) plus explicit booking create/lookup endpoints
 `DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` re-exports it for pytest but
 swaps `DATABASES` to an in-memory SQLite backend (see "Common commands" above for how `make
 test` forces this to actually take effect).
-`django-hotels/wsgi.py`/`asgi.py`/`urls.py` are the minimal dev-only project shell and aren't
+`devsite/wsgi.py`/`asgi.py`/`urls.py` are the minimal dev-only project shell and aren't
 part of the published package.
 
 `DATABASES` reads `DATABASE_ENGINE`, defaulting to `django.db.backends.sqlite3` if unset -
@@ -102,8 +103,8 @@ container involved at all - that service carries `profiles: [mysql]` in `docker-
 so it only starts when explicitly asked for (`docker compose --profile mysql up`), and `web`
 itself only connects to it once `DATABASE_ENGINE=django.db.backends.mysql` is set in `.env`
 too - the profile alone isn't enough, both are required together, on purpose. `mysqlclient` is
-installed via its own `RUN pip install` line in the `Dockerfile` rather than listed in
-`requirements.txt`, so it stays outside GitHub's dependency graph/Dependabot scanning entirely -
+installed via its own `RUN pip install` line in the `Dockerfile` rather than listed as a
+project dependency, so it stays outside GitHub's dependency graph/Dependabot scanning entirely -
 it's dev-only either way, and only ever used when the MySQL opt-in above is active. `web` no
 longer has a `depends_on: database` health-gate (it would break the profile-less default case,
 since Compose can't depend on a profile-gated service that isn't active) - so on a fresh MySQL
@@ -127,3 +128,40 @@ Build test fixtures via `django_hotels/tests/factories.py` (`HotelOwnerFactory`,
 HotelOwner/HotelBooking fixture, since this module is importable wherever the package is
 installed (it's shipped as part of `django_hotels`, not test-only-excluded). A raw
 `.objects.create()` is still fine for a test whose whole point is model/manager mechanics.
+
+## Packaging
+
+All metadata lives in `pyproject.toml` alone (no `setup.py`/`setup.cfg`/`MANIFEST.in`) -
+PEP 621 `[project]` table plus `[tool.setuptools]` for the `src/` layout and package
+discovery. Two things worth knowing if you touch it:
+
+- **Version is derived from the git tag, not hand-maintained.** `src/django_hotels/__init__.py`
+  reads `__version__` via `importlib.metadata.version("django-hotels")` at import time -
+  `setuptools-scm` (`[tool.setuptools_scm]`) computes that version from `git describe` at
+  build time, so tagging *is* the version bump; there's no `__version__` string to remember to
+  edit before tagging, and nothing can drift out of sync with what actually gets published.
+  `.github/workflows/release.yaml` cross-checks this: it runs `python -m setuptools_scm` after
+  checkout and fails the release if it doesn't exactly match the pushed tag, rather than
+  silently patching a version in like the old workflow's `sed` step used to. Local Docker dev
+  has no git tag history to derive from, so the `Dockerfile` sets
+  `SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0.dev0` as the documented escape hatch.
+- **`include-package-data` is explicitly turned off** (`[tool.setuptools]`). PEP 621 metadata
+  defaults it to `true`, which - combined with setuptools-scm's git-file-finder - sweeps every
+  git-tracked file under a found package's directory into the wheel as "package data",
+  bypassing `packages.find`'s `exclude` entirely (this is how `django_hotels.api.tests` was
+  briefly leaking into the built wheel while under `exclude` during this restructuring). This
+  package ships no non-Python data files, so turning it off is the correct fix, not a
+  workaround - don't re-enable it without re-checking wheel contents
+  (`python -m zipfile -l dist/*.whl`) afterward.
+
+`django_hotels.tests` (the factories module, see "Testing conventions" above) ships in the
+built package deliberately; `django_hotels.api.tests` (this package's own internal API test
+suite, not documented as consumer-facing anywhere) is excluded via `packages.find`'s
+`exclude`.
+
+Releasing is CI-only: pushing a version tag triggers `release.yaml`, which builds, runs
+`twine check`, and publishes via PyPI Trusted Publishing (OIDC - `permissions: id-token:
+write`, no stored token). There's deliberately no local/manual publish path in the
+`Makefile` - one existed before (`make publish.test`/`publish.prod`) but it both duplicated
+this pipeline with a legacy `setup.py sdist bdist_wheel` invocation and bypassed its
+version-gate and OIDC auth, so it was removed rather than updated for the new layout.
