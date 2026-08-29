@@ -39,7 +39,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/DestinationPak/django-hotels"
-Changelog = "https://github.com/DestinationPak/django-hotels/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/DestinationPak/django-hotels/blob/main/CHANGELOG.md"
 Issues = "https://github.com/DestinationPak/django-hotels/issues"
 Source = "https://github.com/DestinationPak/django-hotels"
 
