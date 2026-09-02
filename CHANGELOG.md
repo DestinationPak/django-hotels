@@ -5,6 +5,22 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+- Dropped the `djangorestframework` ceiling entirely (`>=3.16,<3.17` to
+  `>=3.16`). The ceiling was blocking consumers from picking up 3.17.2's
+  fix for GHSA-2m8g-3cmr-wg3w (a bypass of Django's
+  `DATA_UPLOAD_MAX_MEMORY_SIZE` when parsing oversized JSON/urlencoded
+  bodies through DRF's `request.data`) and GHSA-g47c-3xmw-q6m2
+  (`AdminRenderer` disclosing GET-protected data on an invalid write
+  request), and DRF has no known-breaking major version to guard
+  against right now, so a floor is enough - consumers can resolve
+  whatever DRF version they actually want.
+- Dropped the `django-filter` ceiling entirely (`>=23.2,<25.2` to
+  `>=23.2`). `django-filter` uses CalVer (23.x/24.x/25.x/26.x, no
+  semver breaking-major signal), and the ceiling was already stale -
+  the latest release (`26.1`) was past it - so it was silently blocking
+  upgrades for no protective reason.
+
 ## [0.3.2] - 2026-08-29
 
 ### Changed
