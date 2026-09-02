@@ -15,6 +15,11 @@ All notable changes to this project are documented here. Format follows
   request), and DRF has no known-breaking major version to guard
   against right now, so a floor is enough - consumers can resolve
   whatever DRF version they actually want.
+- Dropped the `django-filter` ceiling entirely (`>=23.2,<25.2` to
+  `>=23.2`). `django-filter` uses CalVer (23.x/24.x/25.x/26.x, no
+  semver breaking-major signal), and the ceiling was already stale -
+  the latest release (`26.1`) was past it - so it was silently blocking
+  upgrades for no protective reason.
 
 ## [0.3.2] - 2026-08-29
 
