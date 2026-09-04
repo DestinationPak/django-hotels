@@ -9,6 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('django_hotels', '0001_initial'),
+        migrations.swappable_dependency(settings.DJANGO_HOTELS_LOCATION_MODEL),
     ]
 
     operations = [
