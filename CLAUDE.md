@@ -7,8 +7,9 @@ repository.
 
 `django-hotels` is a reusable Django app (published as a pip package, see `pyproject.toml`)
 for hotels, room types, availability, and bookings: models, querysets, business rules
-(`services.py`) and admin. Its DRF API (`django_hotels.api`, `django_hotels.urls`) is deprecated
-since 0.4.0 and removed in 1.0.0, after which each consumer builds its own API. It's the
+(`services.py`) and admin. It ships no API, views or URLs (the DRF API was removed in 1.0.0):
+each consumer builds its own endpoints on the services and querysets. Never add an endpoint,
+serializer or `urls.py` back; a new rule goes in `services.py` or a queryset. It's the
 Hotels-vertical sibling of [django-trips](https://github.com/awaisdar001/django-trips), and is
 part of the [DestinationPak](https://destinationpak.com) platform.
 
@@ -17,9 +18,8 @@ why). `devsite/` is a separate, throwaway Django *project* shell used only for l
 (`urls.py`/`wsgi.py`/`asgi.py`) - deliberately named nothing like `django_hotels` so the two
 can't be confused with each other or with the published package.
 
-This is a basic initial scaffold — models, a read-only public catalog API, and a guest booking
-flow exist; nothing beyond that has been built yet (no schema/swagger docs, no reviews, no
-staff-facing management endpoints).
+This is a basic initial scaffold: models, the booking and availability rules, and admin exist;
+nothing beyond that has been built yet (no reviews, no availability checks on booking).
 
 ## Common commands
 
@@ -73,9 +73,7 @@ field on `Hotel` - the original free-text `Hotel.city` `CharField` (`migrations/
 dropped (`migrations/0004_remove_hotel_city.py`), once every consumer (destipak included) had
 finished backfilling against its own chosen Location model. `django_hotels/location_adapter.py`
 (`LocationAdapter`/`get_location_adapter()`, `DJANGO_HOTELS_LOCATION_ADAPTER`) is the read path
-for location fields - `HotelListSerializer`/`HotelDetailSerializer` now expose `location` as a
-nested object through the adapter (via this package's own `LocationSerializer`), and
-`HotelViewSet`'s `?location=<id>` query param filters on it directly. `AbstractLocation`
+a consumer uses for location fields. `AbstractLocation`
 (`models.py`) is a plain abstract Django model - the same shape `AbstractUser` is, real fields
 and concrete methods, not an interface class - an installer building a brand-new custom
 Location model can inherit directly instead of writing a `LocationAdapter` subclass; see
@@ -83,24 +81,12 @@ README's "Custom Location model" for when to reach for which.
 
 ### Business rules
 
-Rules live in `services.py` (writes) and the model querysets in `managers.py` (reads), never
-only in a serializer or view: `create_hotel_booking()` prices a booking at the availability's
+Rules live in `services.py` (writes) and the model querysets in `managers.py` (reads), so every
+consumer's API, command or admin action gets the same behavior: `create_hotel_booking()` prices a booking at the availability's
 `effective_price` per guest (no stock check or decrement yet), `HotelAvailability.objects
 .bookable()` is the public availability rule (in stock, room type active, hotel active, owner
 verified), and `HotelBooking.objects.matching_guest(number, otp=..., email=...)` is the guest
 lookup rule (never `number` alone).
-
-### API layer (deprecated, removed in 1.0.0)
-
-Don't add endpoints or business logic here; importing `django_hotels.api` emits a
-`DeprecationWarning`. The notes below describe the 0.x API as it stands.
-
-`django_hotels/api/urls.py` wires a DRF `DefaultRouter` for `HotelViewSet` (read-only, public,
-`ReadOnlyModelViewSet` — no create/update/destroy in this package, matching django-trips'
-post-hardening `TripViewSet`) plus explicit booking create/lookup endpoints
-(`HotelBookingCreateView` is `AllowAny` — guest booking is a product requirement;
-`HotelBookingLookupView` requires `number` plus `otp` or `email`, never `number` alone, via
-`HotelBooking.objects.matching_guest`).
 
 ### Settings
 
@@ -131,9 +117,9 @@ healthy. Not a bug, just the trade-off of making MySQL truly optional.
 
 New tests are written as `django.test.TestCase` subclasses, not bare
 `@pytest.mark.django_db`-decorated functions - matches `djangoapps/hotel_owners`' convention in
-destipak and `django_rentals`' one vertical over. `django_hotels/tests/test_models.py` and
-`django_hotels/api/tests/*.py` predate this convention and haven't been retrofitted - don't take
-their function-style shape as the pattern to follow for new tests.
+destipak and `django_rentals`' one vertical over. `django_hotels/tests/test_models.py` predates
+this convention and hasn't been retrofitted - don't take its function-style shape as the pattern
+to follow for new tests.
 
 Build test fixtures via `django_hotels/tests/factories.py` (`HotelOwnerFactory`,
 `HotelFactory`, `HotelRoomTypeFactory`, `HotelAvailabilityFactory`, `HotelBookingFactory`,
@@ -175,16 +161,12 @@ discovery. Two things worth knowing if you touch it:
 - **`include-package-data` is explicitly turned off** (`[tool.setuptools]`). PEP 621 metadata
   defaults it to `true`, which - combined with setuptools-scm's git-file-finder - sweeps every
   git-tracked file under a found package's directory into the wheel as "package data",
-  bypassing `packages.find`'s `exclude` entirely (this is how `django_hotels.api.tests` was
-  briefly leaking into the built wheel while under `exclude` during this restructuring). This
-  package ships no non-Python data files, so turning it off is the correct fix, not a
+  bypassing `packages.find`'s `exclude` entirely. This package ships no non-Python data files, so turning it off is the correct fix, not a
   workaround - don't re-enable it without re-checking wheel contents
   (`python -m zipfile -l dist/*.whl`) afterward.
 
 `django_hotels.tests` (the factories module, see "Testing conventions" above) ships in the
-built package deliberately; `django_hotels.api.tests` (this package's own internal API test
-suite, not documented as consumer-facing anywhere) is excluded via `packages.find`'s
-`exclude`.
+built package deliberately.
 
 Releasing is CI-only: pushing a version tag triggers `release.yaml`, which builds, runs
 `twine check`, and publishes via PyPI Trusted Publishing (OIDC - `permissions: id-token:
