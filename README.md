@@ -6,8 +6,9 @@
 [![Unit Tests](https://github.com/DestinationPak/django-hotels/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/DestinationPak/django-hotels/actions/workflows/unit-tests.yml)
 
 A Django app for hotels, room types, availability, and bookings: models, querysets, business
-rules and admin. It also ships a DRF API, deprecated since 0.4.0 and removed in 1.0.0 (see
-"Business rules" below).
+rules and admin. It ships no API or URLs: build your own endpoints on the services and querysets
+described under "Business rules" below. (The DRF API it shipped in 0.x was removed in 1.0.0;
+see the changelog.)
 
 This service is a sibling of [django-trips](https://github.com/awaisdar001/django-trips), and
 is a core component of the [DestinationPak](https://destinationpak.com) project — a platform
@@ -20,12 +21,10 @@ pip install django-hotels
 ```
 
 ## Usage
-Add the app (and `django_filters`, used by the catalog/availability filtering below) into
-your installed apps in your project's settings file.
+Add the app into your installed apps in your project's settings file.
 ```
 INSTALLED_APPS = [
     ...
-    'django_filters',
     'django_hotels',
 ]
 ```
@@ -33,16 +32,6 @@ INSTALLED_APPS = [
 ```
 python manage.py migrate
 ```
-Add the following to your root `urls.py` or to your desired file location.
-```
-urlpatterns = [
-    ...
-    path('hotels/', include('django_hotels.urls')),
-]
-```
-This mounts the whole app under your own chosen namespace (`hotels/` above - replace with
-whatever prefix you like) with the lib's own `v1/` version underneath it, e.g.
-`hotels/v1/hotels/`. The app versions itself independently of your project's own API version.
 
 ## Domain model
 
@@ -79,28 +68,6 @@ found = HotelBooking.objects.matching_guest(number, email="ayesha@example.com")
 `matching_guest` never matches on the booking number alone: it needs the `otp` or the `email`
 as well, so a guessed number can't reveal someone else's booking. `create_hotel_booking` doesn't
 check or reduce `rooms_available` yet.
-
-## Public API
-
-> **Deprecated:** the DRF API below (`django_hotels.api`, `django_hotels.urls`) is removed in
-> 1.0.0. Build your own endpoints on the services and querysets above.
-
-
-Read-only and unauthenticated (`AllowAny`) unless noted:
-
-- `hotels/` - the published catalog. Filterable via query params: `?city=`, `?status=`,
-  `?owner=<id>`.
-- `hotels/<slug>/` - one hotel's detail, including its room types.
-- `owners/` - active, verified `HotelOwner`s.
-- `availabilities/` - date-range availability search across active hotels' room types.
-  Filterable via `?hotel=<slug>`, `?room_type=<id>`, `?date_from=`, `?date_to=` (any
-  combination; omitting all three returns every upcoming bookable date).
-- `bookings/create/` - guest booking (no auth required).
-- `bookings/lookup/?number=&email=` (or `&otp=` instead of `email`) - guest "find my
-  booking".
-- `bookings/<number>/` - authenticated traveller's own booking (retrieve/update).
-- `schema/`, `schema/swagger-ui/`, `schema/redoc/` - this app's own OpenAPI schema,
-  scoped to just these endpoints regardless of what else your project mounts.
 
 ## Custom Location model
 
