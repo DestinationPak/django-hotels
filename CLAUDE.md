@@ -6,7 +6,9 @@ repository.
 ## What this is
 
 `django-hotels` is a reusable Django app (published as a pip package, see `pyproject.toml`)
-providing a REST API for managing hotels, room types, availability, and bookings. It's the
+for hotels, room types, availability, and bookings: models, querysets, business rules
+(`services.py`) and admin. Its DRF API (`django_hotels.api`, `django_hotels.urls`) is deprecated
+since 0.4.0 and removed in 1.0.0, after which each consumer builds its own API. It's the
 Hotels-vertical sibling of [django-trips](https://github.com/awaisdar001/django-trips), and is
 part of the [DestinationPak](https://destinationpak.com) platform.
 
@@ -79,13 +81,26 @@ and concrete methods, not an interface class - an installer building a brand-new
 Location model can inherit directly instead of writing a `LocationAdapter` subclass; see
 README's "Custom Location model" for when to reach for which.
 
-### API layer
+### Business rules
+
+Rules live in `services.py` (writes) and the model querysets in `managers.py` (reads), never
+only in a serializer or view: `create_hotel_booking()` prices a booking at the availability's
+`effective_price` per guest (no stock check or decrement yet), `HotelAvailability.objects
+.bookable()` is the public availability rule (in stock, room type active, hotel active, owner
+verified), and `HotelBooking.objects.matching_guest(number, otp=..., email=...)` is the guest
+lookup rule (never `number` alone).
+
+### API layer (deprecated, removed in 1.0.0)
+
+Don't add endpoints or business logic here; importing `django_hotels.api` emits a
+`DeprecationWarning`. The notes below describe the 0.x API as it stands.
 
 `django_hotels/api/urls.py` wires a DRF `DefaultRouter` for `HotelViewSet` (read-only, public,
 `ReadOnlyModelViewSet` — no create/update/destroy in this package, matching django-trips'
 post-hardening `TripViewSet`) plus explicit booking create/lookup endpoints
 (`HotelBookingCreateView` is `AllowAny` — guest booking is a product requirement;
-`HotelBookingLookupView` requires both `number` and `email`, never `number` alone).
+`HotelBookingLookupView` requires `number` plus `otp` or `email`, never `number` alone, via
+`HotelBooking.objects.matching_guest`).
 
 ### Settings
 

@@ -5,7 +5,28 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-25
+
+### Added
+- `django_hotels.services.create_hotel_booking()`, the booking rule that
+  used to live only in `HotelBookingCreateSerializer.create()`: prices the
+  booking at the availability's effective price per guest. It doesn't
+  check or reduce `rooms_available` yet.
+- `HotelAvailability.objects.bookable()` (in stock, room type active,
+  hotel active, owner verified, earliest date first) and
+  `HotelBooking.objects.matching_guest(number, otp=..., email=...)` (the
+  guest lookup, never on `number` alone). The API views call these, so API
+  behaviour is unchanged.
+
+### Deprecated
+- `django_hotels.api` and `django_hotels.urls`. Importing
+  `django_hotels.api` now emits a `DeprecationWarning`. Both are removed in
+  1.0.0, which ships the domain only; build your own API on
+  `django_hotels.services` and the querysets.
+
 ### Changed
+- The package description now calls it a Django app rather than a REST
+  API.
 - Dropped the `djangorestframework` ceiling entirely (`>=3.16,<3.17` to
   `>=3.16`). The ceiling was blocking consumers from picking up 3.17.2's
   fix for GHSA-2m8g-3cmr-wg3w (a bypass of Django's

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "django-hotels"
 dynamic = ["version"]
-description = "A Django Rest API for managing hotels, room types, availability, and bookings."
+description = "A Django app for hotels, room types, availability and bookings: models, business rules and admin."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Awais Jibran", email = "awaisdar001@gmail.com" }]
