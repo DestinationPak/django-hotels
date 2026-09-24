@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from django_hotels import services
 from django_hotels.location_adapter import get_location_adapter
 from django_hotels.models import (
     Hotel,
@@ -128,13 +129,9 @@ class HotelBookingCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "number", "total_price")
 
     def create(self, validated_data):
-        availability = validated_data["availability"]
-        guests = validated_data.get("guests", 1)
-        validated_data["total_price"] = availability.effective_price * guests
         request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            validated_data["created_by"] = request.user
-        return super().create(validated_data)
+        created_by = request.user if request and request.user.is_authenticated else None
+        return services.create_hotel_booking(created_by=created_by, **validated_data)
 
 
 class HotelBookingLookupSerializer(serializers.ModelSerializer):

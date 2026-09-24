@@ -1,12 +1,13 @@
-# Django Hotels API
+# Django Hotels
 
 [![PyPI version](https://img.shields.io/pypi/v/django-hotels.svg)](https://pypi.org/project/django-hotels/)
 [![Python versions](https://img.shields.io/pypi/pyversions/django-hotels.svg)](https://pypi.org/project/django-hotels/)
 [![License](https://img.shields.io/pypi/l/django-hotels.svg)](https://github.com/DestinationPak/django-hotels/blob/main/LICENSE)
 [![Unit Tests](https://github.com/DestinationPak/django-hotels/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/DestinationPak/django-hotels/actions/workflows/unit-tests.yml)
 
-This is a Django REST API for managing and retrieving hotels, room types, availability, and
-bookings.
+A Django app for hotels, room types, availability, and bookings: models, querysets, business
+rules and admin. It also ships a DRF API, deprecated since 0.4.0 and removed in 1.0.0 (see
+"Business rules" below).
 
 This service is a sibling of [django-trips](https://github.com/awaisdar001/django-trips), and
 is a core component of the [DestinationPak](https://destinationpak.com) project — a platform
@@ -58,7 +59,32 @@ HotelOwner (the business/brand)
 tenancy-oblivious, the same way `django-trips` is. A consuming project owns the membership
 layer (who may manage which `HotelOwner`), not this library.
 
+## Business rules
+
+The booking and availability rules live in `django_hotels.services` and the model querysets, so
+any caller (your own API, a management command, the admin) gets the same behaviour:
+
+```python
+from django_hotels.models import HotelAvailability, HotelBooking
+from django_hotels.services import create_hotel_booking
+
+open_dates = HotelAvailability.objects.bookable()          # in stock, active, verified owner
+booking = create_hotel_booking(
+    availability, full_name="Ayesha Khan", email="ayesha@example.com",
+    phone_number="+923001234567", guests=2,
+)                                                            # priced per guest
+found = HotelBooking.objects.matching_guest(number, email="ayesha@example.com")
+```
+
+`matching_guest` never matches on the booking number alone: it needs the `otp` or the `email`
+as well, so a guessed number can't reveal someone else's booking. `create_hotel_booking` doesn't
+check or reduce `rooms_available` yet.
+
 ## Public API
+
+> **Deprecated:** the DRF API below (`django_hotels.api`, `django_hotels.urls`) is removed in
+> 1.0.0. Build your own endpoints on the services and querysets above.
+
 
 Read-only and unauthenticated (`AllowAny`) unless noted:
 

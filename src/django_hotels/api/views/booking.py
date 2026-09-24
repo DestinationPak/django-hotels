@@ -43,9 +43,9 @@ class HotelBookingLookupView(generics.RetrieveAPIView):
                 }
             )
 
-        bookings = HotelBooking.objects.filter(number=number)
-        bookings = bookings.filter(otp=otp) if otp else bookings.filter(email__iexact=email)
-        return get_object_or_404(bookings)
+        return get_object_or_404(
+            HotelBooking.objects.matching_guest(number, otp=otp, email=email)
+        )
 
 
 class HotelBookingRetrieveUpdateViewSet(GenericViewSet, generics.RetrieveUpdateAPIView):

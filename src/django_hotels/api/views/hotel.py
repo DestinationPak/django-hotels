@@ -57,12 +57,6 @@ class HotelAvailabilityListAPIView(generics.ListAPIView):
     filterset_class = HotelAvailabilityFilter
 
     def get_queryset(self):
-        return (
-            HotelAvailability.objects.filter(
-                rooms_available__gt=0,
-                room_type__is_active=True,
-                room_type__hotel__in=Hotel.objects.active(),
-            )
-            .select_related("room_type", "room_type__hotel")
-            .order_by("date")
+        return HotelAvailability.objects.bookable().select_related(
+            "room_type", "room_type__hotel"
         )

@@ -177,6 +177,8 @@ class HotelAvailability(models.Model):
     )
     rooms_available = models.PositiveIntegerField(default=1)
 
+    objects = managers.HotelAvailabilityQuerySet.as_manager()
+
     class Meta:
         verbose_name_plural = "Hotel availabilities"
         ordering = ["date"]
@@ -245,6 +247,8 @@ class HotelBooking(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = managers.HotelBookingQuerySet.as_manager()
 
     class Meta:
         ordering = ("-created_at",)
