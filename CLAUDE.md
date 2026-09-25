@@ -1,176 +1,34 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this
-repository.
+`django-hotels` is a reusable Django app published on PyPI: hotels, room types, availability and bookings, as models, querysets, business rules (`services.py`) and admin. It is a sibling of django-trips with the same structure. The app lives in `src/django_hotels/`; `devsite/` is a dev-only project shell.
 
-## What this is
+This file holds only what every session needs. Details live in `docs/development/`; read the matching file before working in that area.
 
-`django-hotels` is a reusable Django app (published as a pip package, see `pyproject.toml`)
-for hotels, room types, availability, and bookings: models, querysets, business rules
-(`services.py`) and admin. It ships no API, views or URLs (the DRF API was removed in 1.0.0):
-each consumer builds its own endpoints on the services and querysets. Never add an endpoint,
-serializer or `urls.py` back; a new rule goes in `services.py` or a queryset. It's the
-Hotels-vertical sibling of [django-trips](https://github.com/awaisdar001/django-trips), and is
-part of the [DestinationPak](https://destinationpak.com) platform.
+## Commands
 
-The importable app lives at `src/django_hotels/` (`src/` layout - see "Packaging" below for
-why). `devsite/` is a separate, throwaway Django *project* shell used only for local dev
-(`urls.py`/`wsgi.py`/`asgi.py`) - deliberately named nothing like `django_hotels` so the two
-can't be confused with each other or with the published package.
+All development runs in Docker. `make dev.up` (SQLite by default), `make shell`, `make update_db`, `make random_hotels`, `make test`. Lint with `python run_lint.py`. Inside the container, `pytest path::Class::test` runs one test.
 
-This is a basic initial scaffold: models, the booking and availability rules, and admin exist;
-nothing beyond that has been built yet (no reviews, no availability checks on booking).
+## Git workflow
 
-## Common commands
+`main` is the base branch. Never commit to `main`: branch off the latest `main`, push, open a PR. Once a branch's PR merges, cut a fresh branch and cherry-pick anything unlanded. The repo lives at `DestinationPak/django-hotels`; pass `-R DestinationPak/django-hotels` to `gh` in case the local remote still points at an old URL.
 
-All development happens inside Docker; there is no supported bare-metal workflow (mirrors
-django-trips).
+## Rules that fail silently
 
-```bash
-make build          # docker compose build (destroys existing containers first)
-make dev.up         # start web (SQLite by default - see "Settings" below for the MySQL opt-in)
-make shell          # attach a shell inside the web container
-make update_db      # run migrations
-make random_hotels  # seed random hotels (generate_hotels --batch_size=10)
-make test           # docker compose run --rm --no-deps -e DJANGO_SETTINGS_MODULE=settings.test web pytest
-make stop / make destroy
-```
+- **No API here.** Never add a view, serializer or `urls.py`. A new rule goes in `services.py` (writes) or a queryset in `managers.py` (reads), raising `ValidationError` keyed by field.
+- **No ownership or permissions here.** Who may manage a `HotelOwner` belongs to the installing project, never this package.
+- **Capacity changes go through the services.** `create_hotel_booking()` takes a room under a row lock; `cancel_hotel_booking()`/`delete_hotel_booking()` give it back. The admin calls them too, so never change `rooms_available` or a booking's status directly.
+- **Location is swappable.** Declare FKs with `swapper` and read fields through `get_location_adapter()`, never by importing `Location`.
+- **Tests run on SQLite, not MySQL.** `select_for_update()` is ignored (assert the lock is requested) and there are no unsigned columns. `make test` must keep its `-e DJANGO_SETTINGS_MODULE=settings.test`, or tests silently hit MySQL.
+- **Tests:** `django.test.TestCase` classes, fixtures from `django_hotels/tests/factories.py` instead of `objects.create()`, and dates built from `localdate()`, never hard-coded.
+- **Every change ships to PyPI.** Check public import paths and packaging against a real install and `python -m build` + `twine check`. The version comes from the git tag: tag the merge commit with no `v` prefix, and pushing it publishes.
+- **Keep `include-package-data` off** in `pyproject.toml`, or every tracked file lands in the wheel.
+- This repo is public: never reference a private consuming project's code or paths.
 
-`make test` explicitly overrides `DJANGO_SETTINGS_MODULE` and skips the `database` dependency -
-`settings/test.py` swaps in an in-memory SQLite `DATABASES`, but `docker-compose.yml`'s `web`
-service sets `DJANGO_SETTINGS_MODULE=settings.common` as a container-wide environment variable,
-which pytest-django only ever uses as a fallback (`os.environ.setdefault`, never overriding an
-already-set var) - so without the explicit `-e` override, `pytest.ini`'s own
-`DJANGO_SETTINGS_MODULE = settings.test` is silently ignored and tests run against real MySQL
-instead, which also makes `--no-deps` (skip starting the `database` container) unsafe to combine
-with the plain `docker compose run --rm web pytest` form.
+## Where to read more
 
-## Architecture
-
-### Domain model shape
-
-```
-HotelOwner (the business/brand, mirrors django_trips.Host)
-  └── Hotel (one bookable property, mirrors Trip)
-        ├── HotelImage
-        └── HotelRoomType (a room category/tier, mirrors TripPackage)
-              └── HotelAvailability (dated/priced/bookable, mirrors TripSchedule)
-                    └── HotelBooking (mirrors TripBooking - auto-generated DPH######NN
-                        reference number, guest or logged-in, `created_by` nullable)
-```
-
-**This package is deliberately tenancy-oblivious**, the same way `django_trips` is — it has no
-concept of which user may manage a `HotelOwner`, no scoped querysets, no permission classes
-tied to ownership. That membership/authorization layer belongs to whatever project installs
-this app (e.g. destipak's `djangoapps/hotel_owners/`, mirroring its existing
-`djangoapps/trip_hosts/` for Trips), never to this library itself.
-
-`Location` (plain `name`/`slug`/`lat`/`lng`, no hierarchy - unlike `django_trips.Location`'s
-`type`/`parent`) is swappable via `swapper` (see README's "Custom Location model"), the same
-mechanism `django_trips.Location` uses. `Hotel.location` (nullable FK) is now the only location
-field on `Hotel` - the original free-text `Hotel.city` `CharField` (`migrations/
-0003_backfill_hotel_locations.py` best-effort backfilled `location` from it by name) has been
-dropped (`migrations/0004_remove_hotel_city.py`), once every consumer (destipak included) had
-finished backfilling against its own chosen Location model. `django_hotels/location_adapter.py`
-(`LocationAdapter`/`get_location_adapter()`, `DJANGO_HOTELS_LOCATION_ADAPTER`) is the read path
-a consumer uses for location fields. `AbstractLocation`
-(`models.py`) is a plain abstract Django model - the same shape `AbstractUser` is, real fields
-and concrete methods, not an interface class - an installer building a brand-new custom
-Location model can inherit directly instead of writing a `LocationAdapter` subclass; see
-README's "Custom Location model" for when to reach for which.
-
-### Business rules
-
-Rules live in `services.py` (writes) and the model querysets in `managers.py` (reads), so every
-consumer's API, command or admin action gets the same behavior: `create_hotel_booking()` prices a booking at the availability's
-`effective_price` per guest (no stock check or decrement yet), `HotelAvailability.objects
-.bookable()` is the public availability rule (in stock, room type active, hotel active, owner
-verified), and `HotelBooking.objects.matching_guest(number, otp=..., email=...)` is the guest
-lookup rule (never `number` alone).
-
-### Settings
-
-`settings/common.py` is the real settings module (Docker sets
-`DJANGO_SETTINGS_MODULE=settings.common`); `settings/test.py` re-exports it for pytest but
-swaps `DATABASES` to an in-memory SQLite backend (see "Common commands" above for how `make
-test` forces this to actually take effect).
-`devsite/wsgi.py`/`asgi.py`/`urls.py` are the minimal dev-only project shell and aren't
-part of the published package.
-
-`DATABASES` reads `DATABASE_ENGINE`, defaulting to `django.db.backends.sqlite3` if unset -
-matching the pattern well-known reusable Django apps (django-oscar, wagtail) use. `make dev.up`
-(`docker compose up`, no profile) now runs against SQLite by default, with no `database`
-container involved at all - that service carries `profiles: [mysql]` in `docker-compose.yml`,
-so it only starts when explicitly asked for (`docker compose --profile mysql up`), and `web`
-itself only connects to it once `DATABASE_ENGINE=django.db.backends.mysql` is set in `.env`
-too - the profile alone isn't enough, both are required together, on purpose. `mysqlclient` is
-installed via its own `RUN pip install` line in the `Dockerfile` rather than listed as a
-project dependency, so it stays outside GitHub's dependency graph/Dependabot scanning entirely -
-it's dev-only either way, and only ever used when the MySQL opt-in above is active. `web` no
-longer has a `depends_on: database` health-gate (it would break the profile-less default case,
-since Compose can't depend on a profile-gated service that isn't active) - so on a fresh MySQL
-opt-in, `web`'s first `migrate` can race `database`'s startup and fail once; `restart:
-unless-stopped` retries it automatically and it recovers within a few seconds once MySQL is
-healthy. Not a bug, just the trade-off of making MySQL truly optional.
-
-## Testing conventions
-
-New tests are written as `django.test.TestCase` subclasses, not bare
-`@pytest.mark.django_db`-decorated functions - matches `djangoapps/hotel_owners`' convention in
-destipak and `django_rentals`' one vertical over. `django_hotels/tests/test_models.py` predates
-this convention and hasn't been retrofitted - don't take its function-style shape as the pattern
-to follow for new tests.
-
-Build test fixtures via `django_hotels/tests/factories.py` (`HotelOwnerFactory`,
-`HotelFactory`, `HotelRoomTypeFactory`, `HotelAvailabilityFactory`, `HotelBookingFactory`,
-`UserFactory`) rather than calling `Model.objects.create(...)` directly in a test - mirrors
-`django_trips/tests/factories.py`'s existing convention one vertical over. Consuming projects
-(destipak's `djangoapps/hotel_owners/`) should do the same when their own tests need a Hotel/
-HotelOwner/HotelBooking fixture, since this module is importable wherever the package is
-installed (it's shipped as part of `django_hotels`, not test-only-excluded). A raw
-`.objects.create()` is still fine for a test whose whole point is model/manager mechanics.
-
-## Packaging
-
-**This package is published to PyPI - every change here ships to real installs, not just
-this repo's own Docker dev setup.** As of today there's exactly one known consumer
-(destipak, via an editable VCS install - see its own `requirements/base.in`), but that
-number is 1, not "just us" - the package is public the moment it's on PyPI, regardless of
-how many projects currently depend on it. Before changing anything packaging-related
-(`pyproject.toml`, module layout, `__init__.py`, entry points, dependency ranges) or any
-public import path/behavior, check it against real installer protocols: does `pip install
-django-hotels` still work, does an editable VCS install (`pip install -e
-git+https://...#egg=django-hotels`) still resolve, does `python -m build` + `twine check`
-still pass. Verify with an actual install and a real build, not just the local test suite -
-a change that only works when edited in place inside this repo isn't finished.
-
-All metadata lives in `pyproject.toml` alone (no `setup.py`/`setup.cfg`/`MANIFEST.in`) -
-PEP 621 `[project]` table plus `[tool.setuptools]` for the `src/` layout and package
-discovery. Two things worth knowing if you touch it:
-
-- **Version is derived from the git tag, not hand-maintained.** `src/django_hotels/__init__.py`
-  reads `__version__` via `importlib.metadata.version("django-hotels")` at import time -
-  `setuptools-scm` (`[tool.setuptools_scm]`) computes that version from `git describe` at
-  build time, so tagging *is* the version bump; there's no `__version__` string to remember to
-  edit before tagging, and nothing can drift out of sync with what actually gets published.
-  `.github/workflows/release.yaml` cross-checks this: it runs `python -m setuptools_scm` after
-  checkout and fails the release if it doesn't exactly match the pushed tag, rather than
-  silently patching a version in like the old workflow's `sed` step used to. Local Docker dev
-  has no git tag history to derive from, so the `Dockerfile` sets
-  `SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0.dev0` as the documented escape hatch.
-- **`include-package-data` is explicitly turned off** (`[tool.setuptools]`). PEP 621 metadata
-  defaults it to `true`, which - combined with setuptools-scm's git-file-finder - sweeps every
-  git-tracked file under a found package's directory into the wheel as "package data",
-  bypassing `packages.find`'s `exclude` entirely. This package ships no non-Python data files, so turning it off is the correct fix, not a
-  workaround - don't re-enable it without re-checking wheel contents
-  (`python -m zipfile -l dist/*.whl`) afterward.
-
-`django_hotels.tests` (the factories module, see "Testing conventions" above) ships in the
-built package deliberately.
-
-Releasing is CI-only: pushing a version tag triggers `release.yaml`, which builds, runs
-`twine check`, and publishes via PyPI Trusted Publishing (OIDC - `permissions: id-token:
-write`, no stored token). There's deliberately no local/manual publish path in the
-`Makefile` - one existed before (`make publish.test`/`publish.prod`) but it both duplicated
-this pipeline with a legacy `setup.py sdist bdist_wheel` invocation and bypassed its
-version-gate and OIDC auth, so it was removed rather than updated for the new layout.
+| Working on | Read |
+|---|---|
+| Commands, the `make test` settings trap, MySQL opt-in, lint | `docs/development/setup.md` |
+| Domain model, swappable Location, services, querysets, admin | `docs/development/architecture.md` |
+| `pyproject.toml`, versioning, releases | `docs/development/packaging.md` |
+| Public usage, custom Location model | `README.md` |
