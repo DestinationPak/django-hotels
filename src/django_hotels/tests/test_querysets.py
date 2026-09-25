@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.test import TestCase
+from django.utils.timezone import localdate
 
 from django_hotels.models import HotelAvailability, HotelBooking
 from django_hotels.tests.factories import HotelAvailabilityFactory, HotelBookingFactory
@@ -29,6 +32,29 @@ class BookableAvailabilityTestCase(TestCase):
         HotelAvailabilityFactory(room_type__hotel__owner__verified=False)
 
         self.assertFalse(HotelAvailability.objects.bookable().exists())
+
+
+    def test_leaves_out_past_dates(self):
+        HotelAvailabilityFactory(date=localdate() - timedelta(days=1), rooms_available=2)
+
+        self.assertFalse(HotelAvailability.objects.bookable().exists())
+
+
+class OpenAvailabilityTestCase(TestCase):
+    def test_keeps_sold_out_dates(self):
+        availability = HotelAvailabilityFactory(rooms_available=0)
+
+        self.assertEqual(list(HotelAvailability.objects.open()), [availability])
+
+    def test_includes_today(self):
+        availability = HotelAvailabilityFactory(date=localdate())
+
+        self.assertEqual(list(HotelAvailability.objects.open()), [availability])
+
+    def test_leaves_out_past_dates(self):
+        HotelAvailabilityFactory(date=localdate() - timedelta(days=1))
+
+        self.assertFalse(HotelAvailability.objects.open().exists())
 
 
 class MatchingGuestTestCase(TestCase):

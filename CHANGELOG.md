@@ -5,6 +5,19 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-25
+
+### Added
+- `HotelAvailability.objects.open()`: dates a guest may book, whether or
+  not rooms are left (today onwards, active room type, active hotel,
+  verified owner).
+
+### Fixed
+- `bookable()` included past dates; it is now `open()` with a room left.
+- `create_hotel_booking()` accepted a past date, or a date at an inactive
+  hotel or room type or an unverified owner. It now raises
+  `ValidationError({"availability": ...})` for any date outside `open()`.
+
 ## [1.1.0] - 2026-09-25
 
 ### Added

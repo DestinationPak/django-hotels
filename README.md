@@ -57,7 +57,7 @@ any caller (your own API, a management command, the admin) gets the same behavio
 from django_hotels.models import HotelAvailability, HotelBooking
 from django_hotels.services import cancel_hotel_booking, create_hotel_booking
 
-open_dates = HotelAvailability.objects.bookable()          # in stock, active, verified owner
+open_dates = HotelAvailability.objects.bookable()          # from today, in stock, active, verified owner
 booking = create_hotel_booking(
     availability, full_name="Ayesha Khan", email="ayesha@example.com",
     phone_number="+923001234567", guests=2,
@@ -69,6 +69,7 @@ found = HotelBooking.objects.matching_guest(number, email="ayesha@example.com")
 `matching_guest` never matches on the booking number alone: it needs the `otp` or the `email`
 as well, so a guessed number can't reveal someone else's booking. A booking takes one room:
 `create_hotel_booking` raises Django's `ValidationError` (keyed by `availability`) when
+the date isn't in `HotelAvailability.objects.open()` (past, or its hotel isn't bookable) or
 `rooms_available` is already 0, and otherwise lowers it by one under a row lock, so two bookings
 can't both take the last room. `cancel_hotel_booking` raises `ValidationError` for a booking
 that is already cancelled or past `PENDING`/`WAITING_PAYMENT`, and otherwise gives the room
