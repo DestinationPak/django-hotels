@@ -5,6 +5,22 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-25
+
+### Added
+- A `check_cancellable` keyword on the cancel service. Staff tools pass
+  `cancel_hotel_booking(..., check_cancellable=False)` to cancel a booking in any live status, not only one a guest
+  could still cancel.
+- `delete_hotel_booking()`: deletes a booking, first giving its room back unless it was
+  already cancelled.
+
+### Fixed
+- The admin changed a booking's status or deleted it without touching
+  capacity, so room were lost for good. Cancelling or deleting in the
+  admin (including the bulk delete action) now goes through the services,
+  a cancelled booking can't be reopened, and `availability` are read-only on an
+  existing booking.
+
 ## [1.2.0] - 2026-09-25
 
 ### Added
