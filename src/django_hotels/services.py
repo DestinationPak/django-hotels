@@ -61,23 +61,37 @@ def create_hotel_booking(  # pylint:disable=too-many-arguments
     return booking
 
 
-def cancel_hotel_booking(booking):
+def _give_room_back(booking):
+    HotelAvailability.objects.filter(pk=booking.availability_id).update(
+        rooms_available=F("rooms_available") + 1
+    )
+
+
+def cancel_hotel_booking(booking, *, check_cancellable=True):
     """
     Cancel `booking` and give its room back to the availability.
 
-    Raises a ValidationError when the booking is already cancelled or its
-    status no longer allows cancelling.
+    Raises a ValidationError when the booking is already cancelled, or when
+    `check_cancellable` is set and its status no longer allows a guest or
+    owner to cancel. Staff tools pass `check_cancellable=False` to cancel a
+    confirmed booking too.
     """
     if HotelBookingStatus.is_cancelled(booking.status):
         raise ValidationError(ALREADY_CANCELLED)
-    if not HotelBookingStatus.can_be_cancelled(booking.status):
+    if check_cancellable and not HotelBookingStatus.can_be_cancelled(booking.status):
         raise ValidationError(CANNOT_BE_CANCELLED)
 
     with transaction.atomic():
         booking.status = HotelBookingStatus.CANCELLED
         booking.save(update_fields=["status", "updated_at"])
-        HotelAvailability.objects.filter(pk=booking.availability_id).update(
-            rooms_available=F("rooms_available") + 1
-        )
+        _give_room_back(booking)
 
     return booking
+
+
+def delete_hotel_booking(booking):
+    """Delete `booking`, first giving its room back unless it was cancelled."""
+    with transaction.atomic():
+        if not HotelBookingStatus.is_cancelled(booking.status):
+            _give_room_back(booking)
+        booking.delete()
