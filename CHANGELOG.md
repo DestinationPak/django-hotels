@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-25
+
+### Added
+- `django_hotels.services.cancel_hotel_booking()`: cancels a `PENDING` or
+  `WAITING_PAYMENT` booking and gives its room back. Raises
+  `ValidationError` for any other status.
+
+### Changed
+- `create_hotel_booking()` now checks availability: a booking takes one
+  room off `rooms_available`, under a row lock, and raises
+  `ValidationError({"availability": ...})` when no rooms are left.
+  Cancel through `cancel_hotel_booking()` rather than setting the status
+  directly, or the room isn't given back.
+
 ## [1.0.0] - 2026-09-25
 
 The package now ships the hotels domain only: models, querysets, services,
