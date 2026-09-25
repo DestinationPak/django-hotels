@@ -1,7 +1,16 @@
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from django_hotels.services import create_hotel_booking
-from django_hotels.tests.factories import HotelAvailabilityFactory, UserFactory
+from django_hotels.choices import HotelBookingStatus
+from django_hotels.models import HotelAvailability, HotelBooking
+from django_hotels.services import (
+    ALREADY_CANCELLED,
+    CANNOT_BE_CANCELLED,
+    SOLD_OUT,
+    cancel_hotel_booking,
+    create_hotel_booking,
+)
+from django_hotels.tests.factories import HotelAvailabilityFactory, HotelBookingFactory, UserFactory
 
 
 class CreateHotelBookingTestCase(TestCase):
@@ -35,3 +44,58 @@ class CreateHotelBookingTestCase(TestCase):
         )
 
         self.assertEqual(booking.created_by, user)
+
+    def test_takes_one_room_off_the_availability(self):
+        availability = HotelAvailabilityFactory(rooms_available=2)
+
+        create_hotel_booking(availability, guests=3, **self.guest)
+
+        availability.refresh_from_db()
+        self.assertEqual(availability.rooms_available, 1)
+
+    def test_rejects_a_sold_out_date(self):
+        availability = HotelAvailabilityFactory(rooms_available=1)
+        create_hotel_booking(availability, **self.guest)
+
+        with self.assertRaises(ValidationError) as ctx:
+            create_hotel_booking(availability, **self.guest)
+
+        self.assertEqual(ctx.exception.message_dict, {"availability": [SOLD_OUT]})
+        self.assertEqual(HotelBooking.objects.count(), 1)
+
+    def test_checks_the_stored_count_not_the_passed_instance(self):
+        availability = HotelAvailabilityFactory(rooms_available=1)
+        stale = HotelAvailability.objects.get(pk=availability.pk)
+        create_hotel_booking(availability, **self.guest)
+
+        with self.assertRaises(ValidationError):
+            create_hotel_booking(stale, **self.guest)
+
+
+class CancelHotelBookingTestCase(TestCase):
+    def test_cancels_and_gives_the_room_back(self):
+        booking = HotelBookingFactory(availability__rooms_available=0)
+
+        cancel_hotel_booking(booking)
+
+        booking.refresh_from_db()
+        booking.availability.refresh_from_db()
+        self.assertEqual(booking.status, HotelBookingStatus.CANCELLED)
+        self.assertEqual(booking.availability.rooms_available, 1)
+
+    def test_rejects_an_already_cancelled_booking(self):
+        booking = HotelBookingFactory(
+            status=HotelBookingStatus.CANCELLED, availability__rooms_available=0
+        )
+
+        with self.assertRaisesMessage(ValidationError, ALREADY_CANCELLED):
+            cancel_hotel_booking(booking)
+
+        booking.availability.refresh_from_db()
+        self.assertEqual(booking.availability.rooms_available, 0)
+
+    def test_rejects_a_confirmed_booking(self):
+        booking = HotelBookingFactory(status=HotelBookingStatus.CONFIRMED)
+
+        with self.assertRaisesMessage(ValidationError, CANNOT_BE_CANCELLED):
+            cancel_hotel_booking(booking)
