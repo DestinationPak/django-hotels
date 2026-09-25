@@ -1,11 +1,15 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils.timezone import localdate
 
 from django_hotels.choices import HotelBookingStatus
 from django_hotels.models import HotelAvailability, HotelBooking
 from django_hotels.services import (
     ALREADY_CANCELLED,
     CANNOT_BE_CANCELLED,
+    NOT_OPEN,
     SOLD_OUT,
     cancel_hotel_booking,
     create_hotel_booking,
@@ -70,6 +74,25 @@ class CreateHotelBookingTestCase(TestCase):
 
         with self.assertRaises(ValidationError):
             create_hotel_booking(stale, **self.guest)
+
+
+    def test_rejects_a_past_date(self):
+        availability = HotelAvailabilityFactory(date=localdate() - timedelta(days=1), rooms_available=3)
+
+        with self.assertRaises(ValidationError) as ctx:
+            create_hotel_booking(availability, **self.guest)
+
+        self.assertEqual(ctx.exception.message_dict, {"availability": [NOT_OPEN]})
+
+    def test_rejects_a_date_at_an_inactive_hotel(self):
+        availability = HotelAvailabilityFactory(room_type__hotel__is_active=False, rooms_available=3)
+
+        with self.assertRaises(ValidationError) as ctx:
+            create_hotel_booking(availability, **self.guest)
+
+        self.assertEqual(ctx.exception.message_dict, {"availability": [NOT_OPEN]})
+        availability.refresh_from_db()
+        self.assertEqual(availability.rooms_available, 3)
 
 
 class CancelHotelBookingTestCase(TestCase):

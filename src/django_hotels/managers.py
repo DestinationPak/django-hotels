@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.timezone import localdate
 
 
 class ActiveQuerySet(models.QuerySet):
@@ -17,20 +18,24 @@ class HotelQuerySet(ActiveQuerySet):
 
 
 class HotelAvailabilityQuerySet(models.QuerySet):
-    def bookable(self):
+    def open(self):
         """
-        Availability a guest can book, earliest date first.
+        Dates a guest may book, whether or not rooms are left.
 
-        Leaves out sold-out dates, inactive room types, and hotels that are
+        Leaves out past dates, inactive room types, and hotels that are
         inactive or whose owner isn't verified (the `Hotel.objects.active()`
         rules).
         """
         return self.filter(
-            rooms_available__gt=0,
+            date__gte=localdate(),
             room_type__is_active=True,
             room_type__hotel__is_active=True,
             room_type__hotel__owner__verified=True,
-        ).order_by("date")
+        )
+
+    def bookable(self):
+        """Open dates with a room left, earliest first."""
+        return self.open().filter(rooms_available__gt=0).order_by("date")
 
 
 class HotelBookingQuerySet(models.QuerySet):

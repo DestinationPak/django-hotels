@@ -7,6 +7,7 @@ from django.db.models import F
 from django_hotels.choices import HotelBookingStatus
 from django_hotels.models import HotelAvailability, HotelBooking
 
+NOT_OPEN = "This date is not open for booking."
 SOLD_OUT = "No rooms left on this date."
 ALREADY_CANCELLED = "Booking is already cancelled."
 CANNOT_BE_CANCELLED = "Booking cannot be cancelled."
@@ -27,15 +28,20 @@ def create_hotel_booking(  # pylint:disable=too-many-arguments
 
     Prices the booking at the availability's effective price per guest and
     takes one room off `rooms_available`. Raises a ValidationError keyed by
-    `availability` when no rooms are left. The check and the update happen
+    `availability` when the date is past or its hotel isn't open for
+    booking, or when no rooms are left. The check and the update happen
     under a row lock, so two bookings can't both take the last room.
     """
     with transaction.atomic():
         availability = (
-            HotelAvailability.objects.select_for_update()
+            HotelAvailability.objects.open()
+            .select_for_update()
             .select_related("room_type")
-            .get(pk=availability.pk)
+            .filter(pk=availability.pk)
+            .first()
         )
+        if availability is None:
+            raise ValidationError({"availability": NOT_OPEN})
         if availability.rooms_available < 1:
             raise ValidationError({"availability": SOLD_OUT})
 
